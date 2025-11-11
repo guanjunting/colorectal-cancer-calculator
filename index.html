@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>早发性结直肠癌预后预测计算器</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a56db',
+                        secondary: '#e2e8f0',
+                        accent: '#3b82f6',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        light: '#f8fafc',
+                        dark: '#1e293b'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .form-input-focus {
+                @apply focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none;
+            }
+            .form-label {
+                @apply block text-sm font-medium text-gray-700 mb-1;
+            }
+            .form-select {
+                @apply block w-full rounded-md border-gray-300 shadow-sm form-input-focus transition duration-200;
+            }
+            .card {
+                @apply bg-white rounded-lg shadow-card p-6 transition duration-300;
+            }
+            .card:hover {
+                @apply shadow-card-hover;
+            }
+            .btn-primary {
+                @apply bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+            }
+            .btn-secondary {
+                @apply bg-secondary hover:bg-secondary/90 text-gray-700 font-medium py-2 px-4 rounded-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2;
+            }
+            .section-title {
+                @apply text-lg font-semibold text-gray-800 mb-4 flex items-center;
+            }
+            .section-title i {
+                @apply mr-2 text-primary;
+            }
+            .result-value {
+                @apply text-2xl md:text-3xl font-bold text-primary;
+            }
+            .result-label {
+                @apply text-sm text-gray-600;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- 标题与说明区域 -->
+        <header class="text-center mb-8">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">早发性结直肠癌预后预测计算器</h1>
+            <p class="text-gray-600 text-sm md:text-base">
+                本计算器基于一项纳入超6000例患者的多中心研究构建，用于评估年龄小于50岁的结直肠癌患者术后生存情况。
+                请填写以下表单获取个体化预测结果。
+            </p>
+        </header>
+
+        <!-- 主内容区 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 输入表单区域 -->
+            <div class="lg:col-span-2">
+                <div class="card">
+                    <form id="predictionForm">
+                        <!-- 患者基本信息 -->
+                        <div class="mb-6">
+                            <h2 class="section-title">
+                                <i class="fa fa-user-circle"></i>患者基本信息
+                            </h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- 种族 -->
+                                <div>
+                                    <label for="Race" class="form-label">种族 (Race)</label>
+                                    <select id="Race" name="Race" class="form-select" required>
+                                        <option value="">请选择</option>
+                                        <option value="White">白人 (White)</option>
+                                        <option value="Black">黑人 (Black)</option>
+                                        <option value="Other">其他 (Other)</option>
+                                    </select>
+                                </div>
+                                <!-- 婚姻状况 -->
+                                <div>
+                                    <label for="Marital-Status" class="form-label">婚姻状况 (Marital Status)</label>
+                                    <select id="Marital-Status" name="Marital-Status" class="form-select" required>
+                                        <option value="">请选择</option>
+                                        <option value="Married">已婚 (Married)</option>
+                                        <option value="Single">单身 (Single)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 肿瘤病理特征 -->
+                        <div class="mb-6">
+                            <h2 class="section-title">
+                                <i class="fa fa-stethoscope"></i>肿瘤病理特征
+                            </h2>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- 肿瘤位置 -->
+                                <div>
+                                    <label for="Tumor-Location" class="form-label">肿瘤位置 (Tumor Location)</label>
+                                    <select id="Tumor-Location" name="Tumor-Location" class="form-select" required>
+                                        <option value="">请选择</option>
+                                        <option value="Right-Colon">右半结肠 (Right Colon)</option>
+                                        <option value="Left-Colon">左半结肠 (Left Colon)</option>
+                                        <option value="Rectum">直肠 (Rectum)</option>
+                                    </select>
+                                </div>
+                                <!-- 组织学类型 -->
+                                <div>
+                                    <label for="Histological-Type" class="form-label">组织学类型 (Histological Type)</label>
+                                    <select id="Histological-Type" name="Histological-Type" class="form-select" required>
+                                        <option value="">请选择</option>
+                                        <option value="Adenocarcinoma">腺癌 (Adenocarcinoma)</option>
+                                        <option value="Mucinous/Signet-ring-cell">粘液腺癌/印戒细胞癌 (Mucinous/Signet-ring cell)</option>
+                                        <option value="Special/Mixed-type">特殊/混合型癌 (Special/Mixed type)</option>
+                                    </select>
+                                </div>
+                                <!-- 肿瘤分级 -->
+                                <div>
+                                    <label for="Tumor-Grade" class="form-label">肿瘤分级 (Tumor Grade)</label>
+                                    <select id="Tumor-Grade" name="Tumor-Grade" class="form-select" required>
+                                        <option value="">请选择</option>
+                                        <option value="Well">高分化 (Well)</option>
+                                        <option value="Moderately">中分化 (Moderately)</option>
+                                        <option value="Poorly">低分化 (Poorly)</option>
+                                        <option value="Undifferentiated">未分化 (Undifferentiated)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 肿瘤分期 -->
+                        <div class="mb-6">
+                            <h2 class="section-title">
+                                <i class="fa fa-bar-chart"></i>肿瘤分期
+                            </h2>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- T分期 -->
+                                <div>
+                                    <label for="T-Stage" class="form-label">T分期 (T Stage)</label>
+                                    <select id="T-Stage" name="T-Stage" class="form-select" required>
+                                        <option value="">请选择</option>
+                                        <option value="T1">T1</option>
+                                        <option value="T2">T2</option>
+                                        <option value="T3">T3</option>
+                                        <option value="T4">T4</option>
+                                    </select>
+                                </div>
+                                <!-- N分期 -->
+                                <div>
+                                    <label for="N-Stage" class="form-label">N分期 (N Stage)</label>
+                                    <select id="N-Stage" name="N-Stage" class="form-select" required>
+                                        <option value="">请选择</option>
+                                        <option value="N0">N0</option>
+                                        <option value="N1">N1</option>
+                                        <option value="N2">N2</option>
+                                    </select>
+                                </div>
+                                <!-- M分期 -->
+                                <div>
+                                    <label for="M-Stage" class="form-label">M分期 (M Stage)</label>
+                                    <select id="M-Stage" name="M-Stage" class="form-select" required>
+                                        <option value="">请选择</option>
+                                        <option value="M0">M0</option>
+                                        <option value="M1a">M1a</option>
+                                        <option value="M1b">M1b</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 治疗信息 -->
+                        <div class="mb-6">
+                            <h2 class="section-title">
+                                <i class="fa fa-medkit"></i>治疗信息
+                            </h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- 术前CEA -->
+                                <div>
+                                    <label for="Preoperative-CEA" class="form-label">术前CEA (Preoperative CEA)</label>
+                                    <select id="Preoperative-CEA" name="Preoperative-CEA" class="form-select" required>
+                                        <option value="">请选择</option>
+                                        <option value="<5-ng/ml">< 5 ng/ml</option>
+                                        <option value="≥5-ng/ml">≥ 5 ng/ml</option>
+                                    </select>
+                                </div>
+                                <!-- 术后化疗 -->
+                                <div>
+                                    <label for="Postoperative-Chemotherapy" class="form-label">术后化疗 (Postoperative Chemotherapy)</label>
+                                    <select id="Postoperative-Chemotherapy" name="Postoperative-Chemotherapy" class="form-select" required>
+                                        <option value="">请选择</option>
+                                        <option value="Yes">是 (Yes)</option>
+                                        <option value="No">否 (No)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 计算按钮 -->
+                        <div class="text-center">
+                            <button type="submit" class="btn-primary">
+                                <i class="fa fa-calculator mr-2"></i>计算预测结果
+                            </button>
+                            <button type="reset" class="btn-secondary ml-2">
+                                <i class="fa fa-refresh mr-2"></i>重置
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 结果显示区域 -->
+            <div class="lg:col-span-1">
+                <div class="card h-full flex flex-col">
+                    <h2 class="section-title">
+                        <i class="fa fa-clipboard"></i>预测结果
+                    </h2>
+                    
+                    <div class="flex-grow flex flex-col justify-center">
+                        <!-- 总风险分数 -->
+                        <div class="mb-6 text-center">
+                            <p class="result-label">总风险分数</p>
+                            <p id="totalScore" class="result-value">0</p>
+                        </div>
+                        
+                        <!-- 生存概率 -->
+                        <div class="space-y-4">
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">1年生存率</span>
+                                    <span id="prob1year" class="text-xl font-bold text-primary">--%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">3年生存率</span>
+                                    <span id="prob3year" class="text-xl font-bold text-primary">--%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">5年生存率</span>
+                                    <span id="prob5year" class="text-xl font-bold text-primary">--%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 生存概率图表 -->
+                        <div class="mt-6">
+                            <canvas id="survivalChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页脚与免责声明 -->
+        <footer class="mt-8 text-center text-sm text-gray-500">
+            <p class="italic">
+                *重要提示：本工具预测结果基于群体数据，仅为临床决策提供参考，不能替代医生的专业判断。
+                实际治疗方案需由主治医生根据患者具体情况制定。
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // 1. 变量评分规则 (每个选项对应的分数)
+        const scoringRules = {
+            'Race': { 'White': 0, 'Black': 15, 'Other': 5 },
+            'Marital-Status': { 'Married': 0, 'Single': 20 },
+            'Tumor-Location': { 'Right-Colon': 0, 'Left-Colon': 18, 'Rectum': 10 },
+            'Histological-Type': { 'Adenocarcinoma': 0, 'Mucinous/Signet-ring-cell': 12, 'Special/Mixed-type': 35 },
+            'Tumor-Grade': { 'Well': 0, 'Moderately': 5, 'Poorly': 25, 'Undifferentiated': 45 },
+            'T-Stage': { 'T1': 0, 'T2': 5, 'T3': 35, 'T4': 60 },
+            'N-Stage': { 'N0': 0, 'N1': 45, 'N2': 70 },
+            'M-Stage': { 'M0': 0, 'M1a': 85, 'M1b': 100 },
+            'Preoperative-CEA': { '<5-ng/ml': 0, '≥5-ng/ml': 40 },
+            'Postoperative-Chemotherapy': { 'Yes': 0, 'No': 30 }
+        };
+
+        // 2. 计算总分数函数
+        function calculateTotalScore(formData) {
+            let total = 0;
+            for (const [key, value] of formData.entries()) {
+                if (scoringRules[key] && scoringRules[key][value]) {
+                    total += scoringRules[key][value];
+                }
+            }
+            return total;
+        }
+
+        // 3. 根据总分数映射生存概率 (此处为示例函数，你需要提供最终模型得出的确切转换公式或查找表)
+        function getSurvivalProbabilities(totalScore) {
+            // 示例：你需要用你真实的模型参数替换这里的逻辑
+            // 这通常是一个由总分数通过回归公式或查找表转换的过程
+            // 例如：1年生存率 = 1 / (1 + Math.exp(-(a + b * totalScore)))
+            // 或者使用一个预定义的分数-概率查找表。
+
+            // 临时示例逻辑（请务必替换！）：
+            const baseProb = 0.85; // 基准概率
+            const decayFactor = 0.002; // 衰减因子
+            const prob1y = (baseProb - decayFactor * totalScore).toFixed(4);
+            const prob3y = (baseProb - 1.5 * decayFactor * totalScore).toFixed(4);
+            const prob5y = (baseProb - 2.2 * decayFactor * totalScore).toFixed(4);
+
+            return {
+                prob1y: Math.max(0, prob1y * 100).toFixed(1), // 转换为百分比并确保不为负
+                prob3y: Math.max(0, prob3y * 100).toFixed(1),
+                prob5y: Math.max(0, prob5y * 100).toFixed(1)
+            };
+        }
+
+        // 4. 表单提交处理
+        document.getElementById('predictionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 获取表单数据
+            const formData = new FormData(this);
+            
+            // 计算总分数
+            const totalScore = calculateTotalScore(formData);
+            
+            // 获取生存概率
+            const probabilities = getSurvivalProbabilities(totalScore);
+            
+            // 更新UI显示
+            document.getElementById('totalScore').textContent = totalScore;
+            document.getElementById('prob1year').textContent = probabilities.prob1y + '%';
+            document.getElementById('prob3year').textContent = probabilities.prob3y + '%';
+            document.getElementById('prob5year').textContent = probabilities.prob5y + '%';
+            
+            // 更新图表
+            updateSurvivalChart(probabilities);
+            
+            // 添加结果显示动画
+            animateResults();
+        });
+
+        // 5. 重置按钮处理
+        document.querySelector('button[type="reset"]').addEventListener('click', function() {
+            // 重置结果显示
+            document.getElementById('totalScore').textContent = '0';
+            document.getElementById('prob1year').textContent = '--%';
+            document.getElementById('prob3year').textContent = '--%';
+            document.getElementById('prob5year').textContent = '--%';
+            
+            // 重置图表
+            if (window.survivalChart) {
+                window.survivalChart.destroy();
+                window.survivalChart = null;
+            }
+        });
+
+        // 6. 初始化生存概率图表
+        function updateSurvivalChart(probabilities) {
+            const ctx = document.getElementById('survivalChart').getContext('2d');
+            
+            // 如果图表已存在，销毁它
+            if (window.survivalChart) {
+                window.survivalChart.destroy();
+            }
+            
+            // 创建新图表
+            window.survivalChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['1年', '3年', '5年'],
+                    datasets: [{
+                        label: '生存率 (%)',
+                        data: [probabilities.prob1y, probabilities.prob3y, probabilities.prob5y],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(59, 130, 246, 0.9)'
+                        ],
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(59, 130, 246, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: '生存率 (%)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `生存率: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 7. 结果显示动画
+        function animateResults() {
+            const resultElements = [
+                document.getElementById('totalScore'),
+                document.getElementById('prob1year'),
+                document.getElementById('prob3year'),
+                document.getElementById('prob5year')
+            ];
+            
+            resultElements.forEach(element => {
+                element.classList.add('animate-pulse');
+                setTimeout(() => {
+                    element.classList.remove('animate-pulse');
+                }, 1000);
+            });
+        }
+
+        // 8. 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化一个空图表
+            updateSurvivalChart({ prob1y: 0, prob3y: 0, prob5y: 0 });
+        });
+    </script>
+</body>
+</html>
